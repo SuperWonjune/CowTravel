@@ -308,7 +308,6 @@ def initialize(window):
         glLoadIdentity()												# Set the GL matrix Identity matrix.
         gluLookAt(c[0],c[1],c[2], c[3],c[4],c[5], c[6],c[7],c[8])		# Setting the coordinate of camera.
         wld2cam.append(glGetDoublev(GL_MODELVIEW_MATRIX).T)
-        hi = wld2cam
         glPopMatrix()													# Transfer the matrix that was pushed the stack to GL.
         cam2wld.append(np.linalg.inv(wld2cam[i]))
     cameraIndex = 0
@@ -344,6 +343,19 @@ def onMouseDrag(window, x, y):
             # create a dragging plane perpendicular to the ray direction, 
             # and test intersection with the screen ray.
             print('vdrag')
+            if cursorOnCowBoundingBox:
+                ray = screenCoordToRay(window, x, y)
+                pp = pickInfo
+                p = Plane(np.array((1, 0, 0)), getTranslation(cow2wld))
+                c = ray.intersectsPlane(p)
+
+                currentPos = ray.getPoint(c[1])
+                # print(pp.cowPickPosition, currentPos)
+                # print(pp.cowPickConfiguration, cow2wld)
+
+                T = np.eye(4)
+                setTranslation(T, currentPos - getTranslation(cow2wld))
+                cow2wld = T @ cow2wld
 
         else:
             # horizontal dragging
@@ -355,8 +367,8 @@ def onMouseDrag(window, x, y):
                 c=ray.intersectsPlane(p)
 
                 currentPos=ray.getPoint(c[1])
-                print(pp.cowPickPosition, currentPos)
-                print(pp.cowPickConfiguration, cow2wld)
+                # print(pp.cowPickPosition, currentPos)
+                # print(pp.cowPickConfiguration, cow2wld)
 
                 
                 T=np.eye(4)
