@@ -327,14 +327,15 @@ def onMouseButton(window,button, state, mods):
     x, y=glfw.get_cursor_pos(window)
     if button == glfw.MOUSE_BUTTON_LEFT:
         if state == GLFW_DOWN:
-            isDrag=V_DRAG
+            isDrag = V_DRAG
             print( "Left mouse down-click at %d %d\n" % (x,y))
             # start vertical dragging
         elif state == GLFW_UP and isDrag!=0:
             isDrag=H_DRAG
             print( "Left mouse up\n")
 
-            # Add at here
+            # cow add at here
+
 
             # start horizontal dragging using mouse-move events.
     elif button == glfw.MOUSE_BUTTON_RIGHT:
@@ -344,10 +345,9 @@ def onMouseButton(window,button, state, mods):
 def onMouseDrag(window, x, y):
     global isDrag,cursorOnCowBoundingBox, pickInfo, cow2wld
     if isDrag: 
-        print( "in drag mode %d\n"% isDrag)
+        # print( "in drag mode %d\n"% isDrag)
         if  isDrag==V_DRAG:
             # vertical dragging
-            print('vdrag')
             if cursorOnCowBoundingBox:
                 ray = screenCoordToRay(window, x, y)
                 pp = pickInfo
@@ -368,7 +368,7 @@ def onMouseDrag(window, x, y):
             if cursorOnCowBoundingBox:
                 ray=screenCoordToRay(window, x, y)
                 pp=pickInfo
-                p=Plane(np.array((0,1,0)), pp.cowPickPosition)
+                p=Plane(np.array((0,1,0)), getTranslation(cow2wld))
                 c=ray.intersectsPlane(p)
 
                 currentPos=ray.getPoint(c[1])
@@ -376,8 +376,8 @@ def onMouseDrag(window, x, y):
                 # print(pp.cowPickConfiguration, cow2wld)
 
                 T=np.eye(4)
-                setTranslation(T, currentPos-pp.cowPickPosition)
-                cow2wld=T@pp.cowPickConfiguration
+                setTranslation(T, currentPos-getTranslation(cow2wld))
+                cow2wld= T @ cow2wld
     else:
         ray=screenCoordToRay(window, x, y)
 
