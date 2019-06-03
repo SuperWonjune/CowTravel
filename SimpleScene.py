@@ -327,15 +327,15 @@ def onMouseButton(window,button, state, mods):
     x, y=glfw.get_cursor_pos(window)
     if button == glfw.MOUSE_BUTTON_LEFT:
         if state == GLFW_DOWN:
-            if isDrag==H_DRAG:
-                isDrag=0
-            else:
-                isDrag=V_DRAG
+            isDrag=V_DRAG
             print( "Left mouse down-click at %d %d\n" % (x,y))
             # start vertical dragging
         elif state == GLFW_UP and isDrag!=0:
             isDrag=H_DRAG
             print( "Left mouse up\n")
+
+            # Add at here
+
             # start horizontal dragging using mouse-move events.
     elif button == glfw.MOUSE_BUTTON_RIGHT:
         if state == GLFW_DOWN:
@@ -351,17 +351,17 @@ def onMouseDrag(window, x, y):
             if cursorOnCowBoundingBox:
                 ray = screenCoordToRay(window, x, y)
                 pp = pickInfo
-                p = Plane(np.array((1, 0, 0)), pp.cowPickPosition)
+                p = Plane(np.array((1, 0, 0)), getTranslation(cow2wld))
                 c = ray.intersectsPlane(p)
 
                 currentPos = ray.getPoint(c[1])
-                currentPos[2] = pp.cowPickPosition[2]
-                print(pp.cowPickPosition, currentPos)
-                print(pp.cowPickConfiguration, cow2wld)
+                currentPos[2] = getTranslation(cow2wld)[2]
+                # print(pp.cowPickPosition, currentPos)
+                # print(pp.cowPickConfiguration, cow2wld)
 
                 T = np.eye(4)
-                setTranslation(T, currentPos - pp.cowPickPosition)
-                cow2wld = T @ pp.cowPickConfiguration
+                setTranslation(T, currentPos - getTranslation(cow2wld))
+                cow2wld = T @ cow2wld
 
         else:
             # horizontal dragging
@@ -372,8 +372,8 @@ def onMouseDrag(window, x, y):
                 c=ray.intersectsPlane(p)
 
                 currentPos=ray.getPoint(c[1])
-                print(pp.cowPickPosition, currentPos)
-                print(pp.cowPickConfiguration, cow2wld)
+                # print(pp.cowPickPosition, currentPos)
+                # print(pp.cowPickConfiguration, cow2wld)
 
                 T=np.eye(4)
                 setTranslation(T, currentPos-pp.cowPickPosition)
