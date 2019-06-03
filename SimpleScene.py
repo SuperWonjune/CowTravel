@@ -33,6 +33,11 @@ V_DRAG=2
 # dragging state
 isDrag=0
 
+# Added global variables
+# have up to 6 points
+controlPoints = []
+
+
 class PickInfo:
     def __init__(self, cursorRayT, cowPickPosition, cowPickConfiguration, cowPickPositionLocal):
         self.cursorRayT=cursorRayT
@@ -133,6 +138,8 @@ def drawCow(_cow2wld, drawBB):
     glMaterialfv(GL_FRONT, GL_DIFFUSE, frontColor)		# Set diffuse property frontColor.
     cowModel.render()	# Draw cow. 
     glDisable(GL_LIGHTING)
+
+    # Draw Box around Cow
     if drawBB:
         glBegin(GL_LINES)
         glColor3d(1,1,1)
@@ -188,6 +195,7 @@ def drawCow(_cow2wld, drawBB):
         glVertex3d( cow.bbmax[0], cow.bbmax[1], cow.bbmax[2])
         glEnd()
     glPopMatrix()			# Pop the matrix in stack to GL. Change it the matrix before drawing cow.
+
 def drawFloor():
 
     glDisable(GL_LIGHTING)
@@ -339,27 +347,24 @@ def onMouseDrag(window, x, y):
         print( "in drag mode %d\n"% isDrag)
         if  isDrag==V_DRAG:
             # vertical dragging
-            # TODO:
-            # create a dragging plane perpendicular to the ray direction, 
-            # and test intersection with the screen ray.
             print('vdrag')
             if cursorOnCowBoundingBox:
                 ray = screenCoordToRay(window, x, y)
                 pp = pickInfo
-                p = Plane(np.array((1, 0, 0)), getTranslation(cow2wld))
+                p = Plane(np.array((1, 0, 0)), pp.cowPickPosition)
                 c = ray.intersectsPlane(p)
 
                 currentPos = ray.getPoint(c[1])
-                # print(pp.cowPickPosition, currentPos)
-                # print(pp.cowPickConfiguration, cow2wld)
+                currentPos[2] = pp.cowPickPosition[2]
+                print(pp.cowPickPosition, currentPos)
+                print(pp.cowPickConfiguration, cow2wld)
 
                 T = np.eye(4)
-                setTranslation(T, currentPos - getTranslation(cow2wld))
-                cow2wld = T @ cow2wld
+                setTranslation(T, currentPos - pp.cowPickPosition)
+                cow2wld = T @ pp.cowPickConfiguration
 
         else:
             # horizontal dragging
-            # Hint: read carefully the following block to implement vertical dragging.
             if cursorOnCowBoundingBox:
                 ray=screenCoordToRay(window, x, y)
                 pp=pickInfo
@@ -367,10 +372,9 @@ def onMouseDrag(window, x, y):
                 c=ray.intersectsPlane(p)
 
                 currentPos=ray.getPoint(c[1])
-                # print(pp.cowPickPosition, currentPos)
-                # print(pp.cowPickConfiguration, cow2wld)
+                print(pp.cowPickPosition, currentPos)
+                print(pp.cowPickConfiguration, cow2wld)
 
-                
                 T=np.eye(4)
                 setTranslation(T, currentPos-pp.cowPickPosition)
                 cow2wld=T@pp.cowPickConfiguration
