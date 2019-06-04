@@ -3,6 +3,7 @@ import sys
 import pdb
 from OpenGL.GL import *
 from OpenGL.GLU import *
+from OpenGL.GLUT import *
 from OpenGL.arrays import ArrayDatatype
 import time
 import numpy as np
@@ -32,11 +33,21 @@ H_DRAG=1
 V_DRAG=2
 # dragging state
 isDrag=0
+isCowSelected = False
 
 # Added global variables
 # have up to 6 points
 controlPoints = []
 
+# moving Cow
+cow2wldMoving=None
+isCowMoving=False
+
+# 캣멀롬 스플라인을 그리기 위해
+LOD = 60;
+controlPointIndex = -3;
+splineLODi = 0;
+timerMilli = 15;
 
 class PickInfo:
     def __init__(self, cursorRayT, cowPickPosition, cowPickConfiguration, cowPickPositionLocal):
@@ -236,7 +247,10 @@ def display():
     #animTime=glfw.get_time()-animStartTime
     #you need to modify both the translation and rotation parts of the cow2wld matrix.
 
-    drawCow(cow2wld, cursorOnCowBoundingBox)														# Draw cow.
+    drawCow(cow2wld, cursorOnCowBoundingBox) # Draw cow.
+    # Draw ControlPoints Cows
+    for cow in controlPoints:
+        drawCow(cow, False)
 
     glFlush()
 
@@ -320,8 +334,42 @@ def initialize(window):
         cam2wld.append(np.linalg.inv(wld2cam[i]))
     cameraIndex = 0
 
+
+def cowAnimateTimer(value):
+    global isCowMoving
+    if isCowMoving:
+        return
+    #
+    # next = getNowSplinePoint()
+    #
+    # rotateCowToGivenDirection(cow2wldroller.getTranslation(), next)
+    #
+    # # Move to next Catmul-Rom
+    # cow2wldroller.setTranslation(next, true)
+    #
+    # splineLODi += 1
+    # if splineLODi == LOD:
+    #     splineLODi = 0
+    #     controlPointIndex += 1
+    #     if (controlPointIndex == cowControlPoints.size()-2)
+    #         # 모든 컨트롤 포인트 순회를 마친 시점
+    #         endRollerCoaster();
+    #         return
+    #
+    # glutTimerFunc(timerMilli, rollerCoasterTimer, 1)
+    # glutPostRedisplay()
+
+
+def cowAnimate():
+    global isCowMoving, cow2wldMoving, controlPointIndex, splineLODi
+    print(len(controlPoints))
+
+    cowAnimateTimer(1)
+
+
+
 def onMouseButton(window,button, state, mods):
-    global isDrag, V_DRAG, H_DRAG
+    global isDrag, V_DRAG, H_DRAG, controlPoints, isCowSelected
     GLFW_DOWN=1
     GLFW_UP=0
     x, y=glfw.get_cursor_pos(window)
@@ -334,10 +382,19 @@ def onMouseButton(window,button, state, mods):
             isDrag=H_DRAG
             print( "Left mouse up\n")
 
+            if not isCowSelected:
+                isCowSelected = True
+                return
             # cow add at here
+            # reference 복사되나?
+            controlPoints.append(cow2wld)
+            print("Control Points Added. Total :", len(controlPoints))
+            # print(controlPoints)
 
-
-            # start horizontal dragging using mouse-move events.
+            # Start Drawing
+            if len(controlPoints) >= 6:
+                controlPoints = controlPoints * 3
+                cowAnimate()
     elif button == glfw.MOUSE_BUTTON_RIGHT:
         if state == GLFW_DOWN:
             print( "Right mouse click at (%d, %d)\n"%(x,y) )
