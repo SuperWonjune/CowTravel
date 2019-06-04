@@ -1,4 +1,5 @@
 import glfw
+import copy
 import sys
 import pdb
 from OpenGL.GL import *
@@ -38,6 +39,8 @@ isCowSelected = False
 # Added global variables
 # have up to 6 points
 controlPoints = []
+NUM_CONTROL_POINTS = 6
+NUM_STEP_ITERATIONS = 3
 
 # moving Cow
 cow2wldMoving=None
@@ -346,10 +349,6 @@ def getControlPoint(index):
 def getNowSplinePoint():
     global controlPointIndex, controlPoints
     t = splineLODi / LOD
-    print("CALCULATING SPLINE 1:", controlPointIndex + 0 % len(controlPoints))
-    print("CALCULATING SPLINE 2:", controlPointIndex + 1 % len(controlPoints))
-    print("CALCULATING SPLINE 3:", controlPointIndex + 2 % len(controlPoints))
-    print("CALCULATING SPLINE 4:", controlPointIndex + 3 % len(controlPoints))
 
     b0 = (-t + 2 * t * t - t * t * t) / 2.0
     b1 = (2 + -5 * t * t + 3 * t * t * t) / 2.0
@@ -402,11 +401,9 @@ def cowAnimateTimer(value):
     setTranslation(cow2wld, next)
 
     splineLODi += 1
-    print(controlPointIndex)
     if splineLODi == LOD:
         splineLODi = 0
         controlPointIndex += 1
-        print(len(controlPoints))
         if controlPointIndex == len(controlPoints) - 1:
             # 모든 컨트롤 포인트 순회를 마친 시점
             controlPoints.clear()
@@ -426,10 +423,16 @@ def cowAnimate():
     cowAnimateTimer(1)
 
 def onMouseButton(window,button, state, mods):
-    global isDrag, V_DRAG, H_DRAG, controlPoints, isCowSelected, isCowMoving
+    global isDrag, V_DRAG, H_DRAG, controlPoints, isCowSelected, isCowMoving, \
+        NUM_CONTROL_POINTS, NUM_STEP_ITERATIONS
     GLFW_DOWN=1
     GLFW_UP=0
     x, y=glfw.get_cursor_pos(window)
+
+    # Animation 모드에선 무효화
+    if isCowMoving:
+        return
+
     if button == glfw.MOUSE_BUTTON_LEFT:
         if state == GLFW_DOWN:
             isDrag = V_DRAG
@@ -444,13 +447,12 @@ def onMouseButton(window,button, state, mods):
                 return
             # cow add at here
             # reference 복사되나?
-            controlPoints.append(cow2wld)
-            print("Control Points Added. Total :", len(controlPoints), cow2wld)
-            # print(controlPoints)
+            controlPoints.append(copy.deepcopy(cow2wld))
+            print("Control Points Added. Total :", len(controlPoints))
 
             # Start Drawing
-            if len(controlPoints) >= 6:
-                controlPoints = controlPoints * 3
+            if len(controlPoints) >= NUM_CONTROL_POINTS:
+                controlPoints = controlPoints * NUM_STEP_ITERATIONS
                 isCowMoving = True
                 cowAnimate()
     elif button == glfw.MOUSE_BUTTON_RIGHT:
@@ -459,7 +461,12 @@ def onMouseButton(window,button, state, mods):
 
 def onMouseDrag(window, x, y):
     global isDrag,cursorOnCowBoundingBox, pickInfo, cow2wld, isCowMoving
-    if isDrag and not isCowMoving:
+
+    # Animation 모드에선 무효화
+    if isCowMoving:
+        return
+
+    if isDrag:
         # print( "in drag mode %d\n"% isDrag)
         if  isDrag==V_DRAG:
             # vertical dragging
