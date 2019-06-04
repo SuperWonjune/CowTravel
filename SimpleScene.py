@@ -44,10 +44,10 @@ cow2wldMoving=None
 isCowMoving=False
 
 # 캣멀롬 스플라인을 그리기 위해
-LOD = 60;
-controlPointIndex = -3;
-splineLODi = 0;
-timerMilli = 15;
+LOD = 60
+controlPointIndex = -3
+splineLODi = 0
+timerMilli = 15
 
 class PickInfo:
     def __init__(self, cursorRayT, cowPickPosition, cowPickConfiguration, cowPickPositionLocal):
@@ -249,8 +249,10 @@ def display():
 
     drawCow(cow2wld, cursorOnCowBoundingBox) # Draw cow.
     # Draw ControlPoints Cows
-    for cow in controlPoints:
-        drawCow(cow, False)
+
+    if not isCowMoving:
+        for cow in controlPoints:
+            drawCow(cow, False)
 
     glFlush()
 
@@ -334,42 +336,97 @@ def initialize(window):
         cam2wld.append(np.linalg.inv(wld2cam[i]))
     cameraIndex = 0
 
+def getControlPoint(index):
+    global controlPoints
+
+    # index_clipped = min(len(controlPoints) - 1, max(0, index))
+    index_clipped = index % len(controlPoints)
+    return getTranslation(controlPoints[index_clipped])
+
+def getNowSplinePoint():
+    global controlPointIndex, controlPoints
+    t = splineLODi / LOD
+    print("CALCULATING SPLINE 1:", controlPointIndex + 0 % len(controlPoints))
+    print("CALCULATING SPLINE 2:", controlPointIndex + 1 % len(controlPoints))
+    print("CALCULATING SPLINE 3:", controlPointIndex + 2 % len(controlPoints))
+    print("CALCULATING SPLINE 4:", controlPointIndex + 3 % len(controlPoints))
+
+    b0 = (-t + 2 * t * t - t * t * t) / 2.0
+    b1 = (2 + -5 * t * t + 3 * t * t * t) / 2.0
+    b2 = (t + 4 * t * t - 3 * t * t * t) / 2.0
+    b3 = (-t * t + t * t * t) / 2.0
+
+    x = b0 * getControlPoint(controlPointIndex + 0)[0] + \
+        b1 * getControlPoint(controlPointIndex + 1)[0] + \
+        b2 * getControlPoint(controlPointIndex + 2)[0] + \
+        b3 * getControlPoint(controlPointIndex + 3)[0]
+
+    y = b0 * getControlPoint(controlPointIndex + 0)[1] + \
+        b1 * getControlPoint(controlPointIndex + 1)[1] + \
+        b2 * getControlPoint(controlPointIndex + 2)[1] + \
+        b3 * getControlPoint(controlPointIndex + 3)[1]
+
+    z = b0 * getControlPoint(controlPointIndex + 0)[2] + \
+        b1 * getControlPoint(controlPointIndex + 1)[2] + \
+        b2 * getControlPoint(controlPointIndex + 2)[2] + \
+        b3 * getControlPoint(controlPointIndex + 3)[2]
+
+    return vector3(x, y, z)
+
+def rotateCowToGivenDirection(current, faceTo):
+    global cow2wld, cow2wldMoving
+
+    d = normalize(current - faceTo)
+    rotate()
+
+    axis = normalize(np.cross(vector3(1,0,0), d))
+    front = normalize(vector3(-1,0,0))
+    up = normalize(vector3(cow2wld[1][0], cow2wld[1][1], cow2wld[1][2]))
+
+    setAxisRotation(axis, front, d)
+
 
 def cowAnimateTimer(value):
-    global isCowMoving
-    if isCowMoving:
+    global isCowMoving, cow2wld, cow2wldMoving, splineLODi, controlPoints,\
+        controlPointIndex, LOD
+
+    if not isCowMoving:
         return
-    #
-    # next = getNowSplinePoint()
-    #
-    # rotateCowToGivenDirection(cow2wldroller.getTranslation(), next)
-    #
-    # # Move to next Catmul-Rom
-    # cow2wldroller.setTranslation(next, true)
-    #
-    # splineLODi += 1
-    # if splineLODi == LOD:
-    #     splineLODi = 0
-    #     controlPointIndex += 1
-    #     if (controlPointIndex == cowControlPoints.size()-2)
-    #         # 모든 컨트롤 포인트 순회를 마친 시점
-    #         endRollerCoaster();
-    #         return
-    #
-    # glutTimerFunc(timerMilli, rollerCoasterTimer, 1)
-    # glutPostRedisplay()
+
+    next = getNowSplinePoint()
+
+    # TODO Rotate
+    # rotateCowToGivenDirection(getTranslation(cow2wld), next)
+
+    # Move to next Catmul-Rom
+    setTranslation(cow2wld, next)
+
+    splineLODi += 1
+    print(controlPointIndex)
+    if splineLODi == LOD:
+        splineLODi = 0
+        controlPointIndex += 1
+        print(len(controlPoints))
+        if controlPointIndex == len(controlPoints) - 1:
+            # 모든 컨트롤 포인트 순회를 마친 시점
+            controlPoints.clear()
+            isCowMoving = False
+            return
+
+    glutTimerFunc(timerMilli, cowAnimateTimer, 1)
+    glutPostRedisplay()
 
 
 def cowAnimate():
     global isCowMoving, cow2wldMoving, controlPointIndex, splineLODi
-    print(len(controlPoints))
+    print("BEGIN ANIMATING...")
+    controlPointIndex = -1
+    splineLODi = 0
 
     cowAnimateTimer(1)
 
-
-
 def onMouseButton(window,button, state, mods):
-    global isDrag, V_DRAG, H_DRAG, controlPoints, isCowSelected
+    global isDrag, V_DRAG, H_DRAG, controlPoints, isCowSelected, isCowMoving
     GLFW_DOWN=1
     GLFW_UP=0
     x, y=glfw.get_cursor_pos(window)
@@ -388,20 +445,21 @@ def onMouseButton(window,button, state, mods):
             # cow add at here
             # reference 복사되나?
             controlPoints.append(cow2wld)
-            print("Control Points Added. Total :", len(controlPoints))
+            print("Control Points Added. Total :", len(controlPoints), cow2wld)
             # print(controlPoints)
 
             # Start Drawing
             if len(controlPoints) >= 6:
                 controlPoints = controlPoints * 3
+                isCowMoving = True
                 cowAnimate()
     elif button == glfw.MOUSE_BUTTON_RIGHT:
         if state == GLFW_DOWN:
             print( "Right mouse click at (%d, %d)\n"%(x,y) )
 
 def onMouseDrag(window, x, y):
-    global isDrag,cursorOnCowBoundingBox, pickInfo, cow2wld
-    if isDrag: 
+    global isDrag,cursorOnCowBoundingBox, pickInfo, cow2wld, isCowMoving
+    if isDrag and not isCowMoving:
         # print( "in drag mode %d\n"% isDrag)
         if  isDrag==V_DRAG:
             # vertical dragging
