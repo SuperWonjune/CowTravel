@@ -36,21 +36,27 @@ V_DRAG=2
 isDrag=0
 isCowSelected = False
 
+# PARAMETERS
+NUM_CONTROL_POINTS = 6
+NUM_STEP_ITERATIONS = 3
+
 # Added global variables
 # have up to 6 points
 controlPoints = []
-NUM_CONTROL_POINTS = 6
-NUM_STEP_ITERATIONS = 3
+controlPointIndex = -1
 
 # moving Cow
 cow2wldMoving=None
 isCowMoving=False
 
-# 캣멀롬 스플라인을 그리기 위해
-LOD = 60
-controlPointIndex = -3
-splineLODi = 0
-timerMilli = 15
+# For timer
+INTERVAL_BETWEEN_CONTROL_POINTS = 1
+elapsedTime = 0
+checkTime = 0
+
+# For Line Drawing
+pointsAtCatmul = []
+
 
 class PickInfo:
     def __init__(self, cursorRayT, cowPickPosition, cowPickConfiguration, cowPickPositionLocal):
@@ -236,7 +242,7 @@ def drawFloor():
     drawFrame(5)				# Draw x, y, and z axis.
 
 def display():
-    global cameraIndex, cow2wld, wld2cam
+    global cameraIndex, cow2wld, wld2cam, pointsAtCatmul
     glClearColor(0.8, 0.9, 0.9, 1.0)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)				# Clear the screen
     # set viewing transformation.
@@ -245,17 +251,35 @@ def display():
     drawOtherCamera()													# Locate the camera's position, and draw all of them.
     drawFloor()													# Draw floor.
 
-    # TODO: 
-    # update cow2wld here to animate the cow.
-    #animTime=glfw.get_time()-animStartTime
-    #you need to modify both the translation and rotation parts of the cow2wld matrix.
+    # Animate
+    if isCowMoving:
+        cowRide()
 
-    drawCow(cow2wld, cursorOnCowBoundingBox) # Draw cow.
-    # Draw ControlPoints Cows
+    # Draw Cow
+    drawCow(cow2wld, cursorOnCowBoundingBox)
 
+    # Draw ControlPointing Cows
     if not isCowMoving:
-        for cow in controlPoints:
-            drawCow(cow, False)
+        for pos in controlPoints:
+            drawCow(pos, False)
+
+    # Draw ControlPoints
+    if isCowMoving:
+        glColor3ub(0, 192, 250)
+        glPointSize(7.)
+        glBegin(GL_POINTS)
+        for pos in controlPoints:
+            glVertex3fv(getTranslation(pos))
+        glEnd()
+
+    # Draw Curve
+    glColor3ub(135, 206, 250)
+    glLineWidth(3.)
+    glBegin(GL_LINE_STRIP)
+    for point in pointsAtCatmul:
+        glVertex3fv(point)
+    glEnd()
+    glLineWidth(1.)
 
     glFlush()
 
@@ -346,9 +370,9 @@ def getControlPoint(index):
     index_clipped = index % len(controlPoints)
     return getTranslation(controlPoints[index_clipped])
 
-def getNowSplinePoint():
-    global controlPointIndex, controlPoints
-    t = splineLODi / LOD
+def getNowSplinePoint(time_elapsed):
+    global controlPointIndex, controlPoints, INTERVAL_BETWEEN_CONTROL_POINTS
+    t = time_elapsed / INTERVAL_BETWEEN_CONTROL_POINTS
 
     b0 = (-t + 2 * t * t - t * t * t) / 2.0
     b1 = (2 + -5 * t * t + 3 * t * t * t) / 2.0
@@ -372,6 +396,8 @@ def getNowSplinePoint():
 
     return vector3(x, y, z)
 
+# TODO
+# ROTATE 구현
 def rotateCowToGivenDirection(current, faceTo):
     global cow2wld, cow2wldMoving
 
@@ -384,43 +410,42 @@ def rotateCowToGivenDirection(current, faceTo):
 
     setAxisRotation(axis, front, d)
 
+def cowRide():
+    global isCowMoving, cow2wld, cow2wldMoving, controlPoints, \
+        controlPointIndex, INTERVAL_BETWEEN_CONTROL_POINTS, \
+        elapsedTime, checkTime, pointsAtCatmul
+    elapsedTime = glfw.get_time() - checkTime
 
-def cowAnimateTimer(value):
-    global isCowMoving, cow2wld, cow2wldMoving, splineLODi, controlPoints,\
-        controlPointIndex, LOD
-
-    if not isCowMoving:
-        return
-
-    next = getNowSplinePoint()
+    next_pos = getNowSplinePoint(elapsedTime)
+    pointsAtCatmul.append(next_pos)
 
     # TODO Rotate
     # rotateCowToGivenDirection(getTranslation(cow2wld), next)
 
     # Move to next Catmul-Rom
-    setTranslation(cow2wld, next)
+    setTranslation(cow2wld, next_pos)
 
-    splineLODi += 1
-    if splineLODi == LOD:
-        splineLODi = 0
+    if elapsedTime >= INTERVAL_BETWEEN_CONTROL_POINTS:
+        checkTime = glfw.get_time()
         controlPointIndex += 1
-        if controlPointIndex == len(controlPoints) - 1:
-            # 모든 컨트롤 포인트 순회를 마친 시점
-            controlPoints.clear()
-            isCowMoving = False
-            return
 
-    glutTimerFunc(timerMilli, cowAnimateTimer, 1)
-    glutPostRedisplay()
+        # Control Points 다 돌았을 때
+        if controlPointIndex >= len(controlPoints) - 1:
+            cowMovingEnd()
 
-
-def cowAnimate():
-    global isCowMoving, cow2wldMoving, controlPointIndex, splineLODi
+def cowMovingInit():
+    global checkTime, controlPointIndex, isCowMoving
     print("BEGIN ANIMATING...")
     controlPointIndex = -1
-    splineLODi = 0
+    checkTime = glfw.get_time()
+    isCowMoving = True
 
-    cowAnimateTimer(1)
+def cowMovingEnd():
+    global controlPoints, pointsAtCatmul, isCowMoving
+    controlPoints.clear()
+    pointsAtCatmul.clear()
+    isCowMoving = False
+
 
 def onMouseButton(window,button, state, mods):
     global isDrag, V_DRAG, H_DRAG, controlPoints, isCowSelected, isCowMoving, \
@@ -445,16 +470,18 @@ def onMouseButton(window,button, state, mods):
             if not isCowSelected:
                 isCowSelected = True
                 return
-            # cow add at here
-            # reference 복사되나?
+
+            # add control points
             controlPoints.append(copy.deepcopy(cow2wld))
             print("Control Points Added. Total :", len(controlPoints))
 
-            # Start Drawing
+
             if len(controlPoints) >= NUM_CONTROL_POINTS:
+                # Duplicate by certain iterations (default 3)
                 controlPoints = controlPoints * NUM_STEP_ITERATIONS
-                isCowMoving = True
-                cowAnimate()
+                # Start the Animation
+                cowMovingInit()
+
     elif button == glfw.MOUSE_BUTTON_RIGHT:
         if state == GLFW_DOWN:
             print( "Right mouse click at (%d, %d)\n"%(x,y) )
@@ -548,7 +575,7 @@ def main():
         sys.exit(-1)
     width = 800
     height = 600
-    window = glfw.create_window(width, height, 'modern opengl example', None, None)
+    window = glfw.create_window(width, height, 'COW COASTER', None, None)
     if not window:
         glfw.terminate()
         sys.exit(-1)
