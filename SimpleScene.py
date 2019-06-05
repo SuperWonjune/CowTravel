@@ -38,8 +38,8 @@ isDrag=0
 isCowSelected = False
 
 # PARAMETERS
-NUM_CONTROL_POINTS = 3
-NUM_STEP_ITERATIONS = 2
+NUM_CONTROL_POINTS = 6
+NUM_STEP_ITERATIONS = 3
 
 # Added global variables
 # have up to 6 points
@@ -278,13 +278,13 @@ def display():
         glEnd()
 
     # Draw Curve
-    # glColor3ub(135, 206, 250)
-    # glLineWidth(3.)
-    # glBegin(GL_LINE_STRIP)
-    # for point in pointsAtCatmul:
-    #     glVertex3fv(point)
-    # glEnd()
-    # glLineWidth(1.)
+    glColor3ub(135, 206, 250)
+    glLineWidth(3.)
+    glBegin(GL_LINE_STRIP)
+    for point in pointsAtCatmul:
+        glVertex3fv(point)
+    glEnd()
+    glLineWidth(1.)
 
     glFlush()
 
@@ -415,23 +415,26 @@ def rotateCowToGivenDirection(current, faceTo):
     up = normalize(vector3(cow2wld[1][0], cow2wld[1][1], cow2wld[1][2]))
 
     roll = 0
-    pitch = math.asin(-d[1])
+    pitch = math.asin(d[1])
     yaw = math.atan2(d[2], d[0])
+
+    if yaw < 0:
+        pitch = -pitch
 
     print('pitch :', pitch * 180 / 3.14)
     print('yaw :', yaw * 180 / 3.14)
-    Rx = np.array([[1, 0, 0],
-                   [0, np.cos(pitch), -np.sin(pitch)],
-                   [0, np.sin(pitch), np.cos(pitch)]])
+    Rx = np.array([[1., 0., 0.],
+                   [0., np.cos(pitch), -np.sin(pitch)],
+                   [0., np.sin(pitch), np.cos(pitch)]])
 
-    Ry = np.array([[np.cos(yaw), 0, np.sin(yaw)],
-                   [0, 1, 0],
-                   [-np.sin(yaw), 0, np.cos(yaw)]])
+    Ry = np.array([[np.cos(yaw), 0., np.sin(yaw)],
+                   [0., 1., 0.],
+                   [-np.sin(yaw), 0., np.cos(yaw)]])
 
-    Rz = np.array([[np.cos(roll), -np.sin(roll), 0],
-                   [np.sin(roll), np.cos(roll), 0],
-                   [0, 0, 1]])
-    setTransformation(cow2wld, (Ry @ Rz @ Rx).T)
+    Rz = np.array([[np.cos(roll), -np.sin(roll), 0.],
+                   [np.sin(roll), np.cos(roll), 0.],
+                   [0., 0., 1.]])
+    setTransformation(cow2wld, (Ry @ Rx @ Rz).T)
 
     # print(cow2wld)
 
