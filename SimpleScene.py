@@ -2,6 +2,7 @@ import glfw
 import copy
 import sys
 import pdb
+import math
 from OpenGL.GL import *
 from OpenGL.GLU import *
 from OpenGL.GLUT import *
@@ -37,8 +38,8 @@ isDrag=0
 isCowSelected = False
 
 # PARAMETERS
-NUM_CONTROL_POINTS = 6
-NUM_STEP_ITERATIONS = 3
+NUM_CONTROL_POINTS = 3
+NUM_STEP_ITERATIONS = 2
 
 # Added global variables
 # have up to 6 points
@@ -48,6 +49,7 @@ controlPointIndex = -1
 # moving Cow
 cow2wldMoving=None
 isCowMoving=False
+cow2wldDefault = []
 
 # For timer
 INTERVAL_BETWEEN_CONTROL_POINTS = 1
@@ -79,6 +81,9 @@ def rotate(m,v):
     return m[0:3, 0:3]@v
 def transform(m, v):
     return position3(m@np.append(v,1))
+
+def setTransformation(m,v):
+    m[0:3, 0:3] = v
 
 def getTranslation(m):
     return m[0:3,3]
@@ -273,13 +278,13 @@ def display():
         glEnd()
 
     # Draw Curve
-    glColor3ub(135, 206, 250)
-    glLineWidth(3.)
-    glBegin(GL_LINE_STRIP)
-    for point in pointsAtCatmul:
-        glVertex3fv(point)
-    glEnd()
-    glLineWidth(1.)
+    # glColor3ub(135, 206, 250)
+    # glLineWidth(3.)
+    # glBegin(GL_LINE_STRIP)
+    # for point in pointsAtCatmul:
+    #     glVertex3fv(point)
+    # glEnd()
+    # glLineWidth(1.)
 
     glFlush()
 
@@ -401,14 +406,41 @@ def getNowSplinePoint(time_elapsed):
 def rotateCowToGivenDirection(current, faceTo):
     global cow2wld, cow2wldMoving
 
-    d = normalize(current - faceTo)
-    rotate()
-
-    axis = normalize(np.cross(vector3(1,0,0), d))
-    front = normalize(vector3(-1,0,0))
+    # print("------")
+    # print(current)
+    # print(faceTo)
+    print("------")
+    d = normalize(faceTo - current)
+    print(d)
     up = normalize(vector3(cow2wld[1][0], cow2wld[1][1], cow2wld[1][2]))
 
-    setAxisRotation(axis, front, d)
+    roll = 0
+    pitch = math.asin(-d[1])
+    yaw = math.atan2(d[2], d[0])
+
+    print('pitch :', pitch * 180 / 3.14)
+    print('yaw :', yaw * 180 / 3.14)
+    Rx = np.array([[1, 0, 0],
+                   [0, np.cos(pitch), -np.sin(pitch)],
+                   [0, np.sin(pitch), np.cos(pitch)]])
+
+    Ry = np.array([[np.cos(yaw), 0, np.sin(yaw)],
+                   [0, 1, 0],
+                   [-np.sin(yaw), 0, np.cos(yaw)]])
+
+    Rz = np.array([[np.cos(roll), -np.sin(roll), 0],
+                   [np.sin(roll), np.cos(roll), 0],
+                   [0, 0, 1]])
+    setTransformation(cow2wld, (Ry @ Rz @ Rx).T)
+
+    # print(cow2wld)
+
+    # axis = normalize(np.cross(vector3(1,0,0), d))
+    # front = normalize(vector3(-1,0,0))
+
+
+    # setAxisRotation(axis, front, d)
+
 
 def cowRide():
     global isCowMoving, cow2wld, cow2wldMoving, controlPoints, \
@@ -416,11 +448,12 @@ def cowRide():
         elapsedTime, checkTime, pointsAtCatmul
     elapsedTime = glfw.get_time() - checkTime
 
+    # next x, y, z position
     next_pos = getNowSplinePoint(elapsedTime)
     pointsAtCatmul.append(next_pos)
 
-    # TODO Rotate
-    # rotateCowToGivenDirection(getTranslation(cow2wld), next)
+    # Rotate cow toward next_pos
+    rotateCowToGivenDirection(getTranslation(cow2wld), next_pos)
 
     # Move to next Catmul-Rom
     setTranslation(cow2wld, next_pos)
@@ -434,14 +467,16 @@ def cowRide():
             cowMovingEnd()
 
 def cowMovingInit():
-    global checkTime, controlPointIndex, isCowMoving
+    global checkTime, cow2wld, controlPoints, controlPointIndex, isCowMoving, cow2wldDefault
     print("BEGIN ANIMATING...")
+    cow2wldDefault = np.copy(controlPoints[0])
     controlPointIndex = -1
     checkTime = glfw.get_time()
     isCowMoving = True
 
 def cowMovingEnd():
-    global controlPoints, pointsAtCatmul, isCowMoving
+    global controlPoints, cow2wld, pointsAtCatmul, isCowMoving, cow2wldDefault
+    cow2wld = np.copy(cow2wldDefault)
     controlPoints.clear()
     pointsAtCatmul.clear()
     isCowMoving = False
