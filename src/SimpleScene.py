@@ -47,7 +47,6 @@ controlPoints = []
 controlPointIndex = -1
 
 # moving Cow
-cow2wldMoving=None
 isCowMoving=False
 cow2wldDefault = []
 
@@ -400,7 +399,7 @@ def getNowSplinePoint(time_elapsed):
     return vector3(x, y, z)
 
 def rotateCowToGivenDirection(current, faceTo):
-    global cow2wld, cow2wldMoving
+    global cow2wld
 
     d = normalize(faceTo - current)
 
@@ -425,7 +424,7 @@ def rotateCowToGivenDirection(current, faceTo):
     setTransformation(cow2wld, (Ry @ Rx @ Rz).T)
 
 def cowRide():
-    global isCowMoving, cow2wld, cow2wldMoving, controlPoints, \
+    global isCowMoving, cow2wld, controlPoints, \
         controlPointIndex, INTERVAL_BETWEEN_CONTROL_POINTS, \
         elapsedTime, checkTime, pointsAtCatmul
     elapsedTime = glfw.get_time() - checkTime
