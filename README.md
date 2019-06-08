@@ -1,3 +1,6 @@
+Never stop mooing until you reach your goal
+
+
 ## Requirements:
 
 - [x] Implements the UI for control point specification
