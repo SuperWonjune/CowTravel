@@ -37,7 +37,7 @@ V_DRAG=2
 isDrag=0
 isCowSelected = False
 
-# PARAMETERS
+# simulation parameters
 NUM_CONTROL_POINTS = 6
 NUM_STEP_ITERATIONS = 3
 
@@ -58,7 +58,6 @@ checkTime = 0
 
 # For Line Drawing
 pointsAtCatmul = []
-
 
 class PickInfo:
     def __init__(self, cursorRayT, cowPickPosition, cowPickConfiguration, cowPickPositionLocal):
@@ -371,7 +370,6 @@ def initialize(window):
 def getControlPoint(index):
     global controlPoints
 
-    # index_clipped = min(len(controlPoints) - 1, max(0, index))
     index_clipped = index % len(controlPoints)
     return getTranslation(controlPoints[index_clipped])
 
@@ -401,18 +399,10 @@ def getNowSplinePoint(time_elapsed):
 
     return vector3(x, y, z)
 
-# TODO
-# ROTATE 구현
 def rotateCowToGivenDirection(current, faceTo):
     global cow2wld, cow2wldMoving
 
-    # print("------")
-    # print(current)
-    # print(faceTo)
-    print("------")
     d = normalize(faceTo - current)
-    print(d)
-    up = normalize(vector3(cow2wld[1][0], cow2wld[1][1], cow2wld[1][2]))
 
     roll = 0
     pitch = math.asin(d[1])
@@ -421,8 +411,6 @@ def rotateCowToGivenDirection(current, faceTo):
     if yaw < 0:
         pitch = -pitch
 
-    print('pitch :', pitch * 180 / 3.14)
-    print('yaw :', yaw * 180 / 3.14)
     Rx = np.array([[1., 0., 0.],
                    [0., np.cos(pitch), -np.sin(pitch)],
                    [0., np.sin(pitch), np.cos(pitch)]])
@@ -435,15 +423,6 @@ def rotateCowToGivenDirection(current, faceTo):
                    [np.sin(roll), np.cos(roll), 0.],
                    [0., 0., 1.]])
     setTransformation(cow2wld, (Ry @ Rx @ Rz).T)
-
-    # print(cow2wld)
-
-    # axis = normalize(np.cross(vector3(1,0,0), d))
-    # front = normalize(vector3(-1,0,0))
-
-
-    # setAxisRotation(axis, front, d)
-
 
 def cowRide():
     global isCowMoving, cow2wld, cow2wldMoving, controlPoints, \
