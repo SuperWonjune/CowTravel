@@ -1,4 +1,6 @@
-Never stop mooing until you reach your goal
+Project from 'Computer Graphics' by Prof.Kwon in '19 Hanyang University
+
+"Never stop mooing until you reach your goal"
 
 
 ## Requirements:
@@ -7,11 +9,11 @@ Never stop mooing until you reach your goal
 
 - [x] Implements vertical dragging (L-drag) as well as horizontal dragging (mouse-move)
 
-- [x] Use the cyclic Catmull-Rom spline curve which is an interpolating spline: 5pt
+- [x] Use the cyclic Catmull-Rom spline curve which is an interpolating spline
 
-- [x] Cow should face forward (yaw orientation): 5pt
+- [x] Cow should face forward (yaw orientation)
 
-- [x] Cow should face upward when going up (pitch orientation) : 5pt
+- [x] Cow should face upward when going up (pitch orientation)
 
 
 
